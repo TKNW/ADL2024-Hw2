@@ -167,3 +167,6 @@ cython_debug/
 
 *.pdf
 *.txt
+*.jsonl
+ADL24-HW2/
+cache/

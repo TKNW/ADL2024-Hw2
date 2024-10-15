@@ -670,8 +670,8 @@ def main():
 
     for epoch in range(starting_epoch, args.num_train_epochs):
         model.train()
-        if args.with_tracking:
-            total_loss = 0
+        #if args.with_tracking:
+        total_loss = 0
         if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
             # We skip the first `n` batches in the dataloader when resuming from a checkpoint
             active_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
@@ -682,8 +682,9 @@ def main():
                 outputs = model(**batch)
                 loss = outputs.loss
                 # We keep track of the loss at each epoch
-                if args.with_tracking:
-                    total_loss += loss.detach().float()
+                #if args.with_tracking:
+                #    total_loss += loss.detach().float()
+                total_loss += loss.detach().float()
                 accelerator.backward(loss)
                 optimizer.step()
                 lr_scheduler.step()
@@ -707,10 +708,12 @@ def main():
         model.eval()
 
         gen_kwargs = {
-            "max_length": args.val_max_target_length,
+            "max_length": args.max_target_length,
             "num_beams": args.num_beams,
-            "do_sample": True,
-            "temperature": 0.5,
+            #"do_sample": True,
+            #"temperature": 0.5,
+            #"top_p": 0.8,
+            #"repetition_penalty": 1.2,
         }
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
@@ -749,6 +752,7 @@ def main():
         result = {k: round(v * 100, 4) for k, v in result.items()}
 
         logger.info(result)
+        logger.info(f"loss: {total_loss.item() / len(train_dataloader)}")
 
         if args.with_tracking:
             result["train_loss"] = total_loss.item() / len(train_dataloader)
