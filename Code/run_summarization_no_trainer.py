@@ -20,6 +20,7 @@ Fine-tuning a 🤗 Transformers model on summarization.
 
 import argparse
 import json
+import pandas as pd
 import logging
 import math
 import os
@@ -668,6 +669,10 @@ def main():
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
 
+    # 紀錄實驗數據
+    eval_rogue = []
+    train_loss = []
+
     for epoch in range(starting_epoch, args.num_train_epochs):
         model.train()
         #if args.with_tracking:
@@ -754,6 +759,9 @@ def main():
         logger.info(result)
         logger.info(f"loss: {total_loss.item() / len(train_dataloader)}")
 
+        eval_rogue.append(result)
+        train_loss.append(total_loss.item() / len(train_dataloader))
+
         if args.with_tracking:
             result["train_loss"] = total_loss.item() / len(train_dataloader)
             result["epoch"] = epoch
@@ -798,6 +806,12 @@ def main():
                     repo_type="model",
                     token=args.hub_token,
                 )
+
+            df = pd.DataFrame({
+                'Train_loss': train_loss,
+                'Eval_rogue': eval_rogue,
+            })
+            df.to_csv(f"{args.output_dir}\\Rogueloss.csv", index=False)
 
             all_results = {f"eval_{k}": v for k, v in result.items()}
             with open(os.path.join(args.output_dir, "all_results.json"), "w", encoding='utf-8') as f:
