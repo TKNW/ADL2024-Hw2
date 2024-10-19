@@ -259,7 +259,7 @@ def main():
         "num_beams": args.num_beams,
         "do_sample": True,
         "temperature": 0.5,
-        "top_p": 0.8,
+        "top_p": 1.0,
         "repetition_penalty": 1.5,
     }
     finalpred = []
