@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ $# -ne 2 ]; then
-    echo "Error: run.sh need three arguments."
-    echo "Usage: run.sh <path to context.json> <path to test.json> <path to output file>"
+    echo "Error: run.sh need two arguments."
+    echo "Usage: run.sh <path to input> <path to output>"
     exit 1
 fi
 echo "path to input: ${1}"
