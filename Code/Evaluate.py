@@ -1,7 +1,5 @@
 import argparse
 import json
-import evaluate
-import nltk
 import numpy as np
 import torch
 from accelerate import Accelerator
@@ -146,8 +144,6 @@ def parse_args():
 
     return args
 
-
-
 def main():
     args = parse_args()
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps)
@@ -208,18 +204,7 @@ def main():
             ]
 
         model_inputs["labels"] = labels["input_ids"]
-        return model_inputs
-    
-    def postprocess_text(preds, labels):
-        preds = [pred.strip() for pred in preds]
-        labels = [label.strip() for label in labels]
-
-        # rougeLSum expects newline after each sentence
-        preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
-        labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
-
-        return preds, labels
-    
+        return model_inputs    
 
     with accelerator.main_process_first():
         test_dataset = raw_datasets["test"].map(
@@ -250,7 +235,6 @@ def main():
 
     model,eval_dataloader = accelerator.prepare(model, eval_dataloader)
 
-    metric = evaluate.load("rouge")
 
     model.eval()
 
@@ -291,21 +275,13 @@ def main():
             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
             decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-            decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-            metric.add_batch(
-                predictions=decoded_preds,
-                references=decoded_labels,
-            )
             for pred in decoded_preds:
                 finalpred.append(pred)
             for ref in decoded_labels:
                 finalreference.append(ref)
-    result = metric.compute(use_stemmer=True)
-    result = {k: round(v * 100, 4) for k, v in result.items()}
     for i in range(20):
         print(f"Pred example {i}: {finalpred[i]}")
         print(f"Reference {i}: {finalreference[i]}")
-    print(result)
     finaloutput = []
     for i in range(len(finalpred)):
         finaloutput.append({'title': finalpred[i], 'id': raw_datasets['test'][i]['id']})
