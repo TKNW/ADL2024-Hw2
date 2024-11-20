@@ -93,12 +93,6 @@ def parse_args():
         help="The name of the column in the datasets containing the full texts (for summarization).",
     )
     parser.add_argument(
-        "--summary_column",
-        type=str,
-        required=True,
-        help="The name of the column in the datasets containing the summaries (for summarization).",
-    )
-    parser.add_argument(
         "--use_slow_tokenizer",
         action="store_true",
         help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",
@@ -178,23 +172,13 @@ def main():
             f"--text_column' value '{args.text_column}' needs to be one of: {', '.join(column_names)}"
         )
    
-    summary_column = args.summary_column
-    if summary_column not in column_names:
-        raise ValueError(
-            f"--summary_column' value '{args.summary_column}' needs to be one of: {', '.join(column_names)}"
-        )
-    
     max_target_length = args.max_target_length
     padding = "max_length" if args.pad_to_max_length else False
 
     def preprocess_function(examples):
         inputs = examples[text_column]
-        targets = examples[summary_column]
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=args.max_source_length, padding=padding, truncation=True)
-
-        # Tokenize targets with the `text_target` keyword argument
-        labels = tokenizer(text_target=targets, max_length=max_target_length, padding=padding, truncation=True)
 
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.

@@ -18,7 +18,7 @@ python ./Code/run_summarization_no_trainer.py --train_file path/to/train_file --
 python ./Code/Evaluate.py --test_file path/to/test_file --output path/to/output --model_path path/to/Model --text_column "maintext" --summary_column "title" --max_source_length 256 --max_target_length 64 --num_beams 8
 ```
 ### 注意事項：
-訓練和預測不吃jsonline，只吃json。
+訓練和預測不吃jsonline，只吃json。可以使用Code/Unicodetransfer.py來轉換。
 
 ## download.sh & run.sh:
 讓助教測試用的，download.sh會下載模型，run.sh會跑預測<br>
