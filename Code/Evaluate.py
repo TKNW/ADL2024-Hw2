@@ -172,22 +172,12 @@ def main():
             f"--text_column' value '{args.text_column}' needs to be one of: {', '.join(column_names)}"
         )
    
-    max_target_length = args.max_target_length
     padding = "max_length" if args.pad_to_max_length else False
 
     def preprocess_function(examples):
         inputs = examples[text_column]
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=args.max_source_length, padding=padding, truncation=True)
-
-        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
-        # padding in the loss.
-        if padding == "max_length" and args.ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
-
-        model_inputs["labels"] = labels["input_ids"]
         return model_inputs    
 
     with accelerator.main_process_first():
@@ -231,7 +221,6 @@ def main():
         "repetition_penalty": 1.5,
     }
     finalpred = []
-    finalreference = []
     for step, batch in tqdm(enumerate(eval_dataloader)):
         with torch.no_grad():
             generated_tokens = accelerator.unwrap_model(model).generate(
@@ -242,30 +231,14 @@ def main():
             generated_tokens = accelerator.pad_across_processes(
                 generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
             )
-            labels = batch["labels"]
-            if not args.pad_to_max_length:
-                # If we did not pad to max length, we need to pad the labels too
-                labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
-
-            generated_tokens, labels = accelerator.gather_for_metrics((generated_tokens, labels))
-            generated_tokens = generated_tokens.cpu().numpy()
-            labels = labels.cpu().numpy()
-
-            if args.ignore_pad_token_for_loss:
-                # Replace -100 in the labels as we can't decode them.
-                labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
             if isinstance(generated_tokens, tuple):
                 generated_tokens = generated_tokens[0]
             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-            decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
             for pred in decoded_preds:
                 finalpred.append(pred)
-            for ref in decoded_labels:
-                finalreference.append(ref)
     for i in range(20):
         print(f"Pred example {i}: {finalpred[i]}")
-        print(f"Reference {i}: {finalreference[i]}")
     finaloutput = []
     for i in range(len(finalpred)):
         finaloutput.append({'title': finalpred[i], 'id': raw_datasets['test'][i]['id']})
